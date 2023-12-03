@@ -1,0 +1,181 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Advent of Code 2023 - Day 03
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.11.3"}
+])
+```
+
+## Setup
+
+```elixir
+import Kino.Shorts
+
+input =
+  read_textarea("Puzzle input",
+    monospace: true,
+    default: """
+    467..114..
+    ...*......
+    ..35..633.
+    ......#...
+    617*......
+    .....+.58.
+    ..592.....
+    ......755.
+    ...$.*....
+    .664.598..\
+    """
+  )
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+"467..114..\n...*......\n..35..633.\n......#...\n617*......\n.....+.58.\n..592.....\n......755.\n...$.*....\n.664.598.."
+```
+
+```elixir
+defmodule Day03Helpers do
+  def neighbors(x, y, length \\ 1) do
+    for neighbor_x <- (x - 1)..(x + 1),
+        neighbor_y <- (y - 1)..(y + length),
+        neighbor_x != x or neighbor_y not in y..(y + length - 1),
+        do: {neighbor_x, neighbor_y}
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Day03Helpers, <<70, 79, 82, 49, 0, 0, 10, ...>>, {:neighbors, 3}}
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Part 1
+
+```elixir
+defmodule Day03Part1 do
+  def solve(input) do
+    [line, _] = String.split(input, "\n", parts: 2)
+    width = String.length(line)
+
+    input_without_newlines = String.replace(input, "\n", "")
+
+    symbol_positions =
+      ~r/[^\.\d]/
+      |> Regex.scan(input_without_newlines, return: :index)
+      |> MapSet.new(fn [{linear_position, 1}] ->
+        x = div(linear_position, width)
+        y = rem(linear_position, width)
+
+        {x, y}
+      end)
+
+    ~r/\d+/
+    |> Regex.scan(input_without_newlines, return: :index)
+    |> Enum.map(fn [{linear_position, length}] ->
+      x = div(linear_position, width)
+      y = rem(linear_position, width)
+
+      neighbors = Day03Helpers.neighbors(x, y, length)
+
+      if Enum.any?(neighbors, &(&1 in symbol_positions)) do
+        input_without_newlines
+        |> String.slice(linear_position, length)
+        |> String.to_integer()
+      else
+        0
+      end
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Day03Part1, <<70, 79, 82, 49, 0, 0, 15, ...>>, {:solve, 1}}
+```
+
+```elixir
+Day03Part1.solve(input)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+4361
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Part 2
+
+```elixir
+defmodule Day03Part2 do
+  def solve(input) do
+    [line, _] = String.split(input, "\n", parts: 2)
+    width = String.length(line)
+
+    input_without_newlines = String.replace(input, "\n", "")
+
+    number_positions =
+      ~r/\d+/
+      |> Regex.scan(input_without_newlines, return: :index)
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {[{linear_position, length}], number_id} ->
+        x = div(linear_position, width)
+        y = rem(linear_position, width)
+
+        number =
+          input_without_newlines
+          |> String.slice(linear_position, length)
+          |> String.to_integer()
+
+        for y <- y..(y + length - 1), do: {{x, y}, {number_id, number}}
+      end)
+      |> Map.new()
+
+    ~r/\*/
+    |> Regex.scan(input_without_newlines, return: :index)
+    |> Enum.map(fn [{linear_position, 1}] ->
+      x = div(linear_position, width)
+      y = rem(linear_position, width)
+
+      neighbors = Day03Helpers.neighbors(x, y)
+
+      neighbors
+      |> Enum.map(&Map.get(number_positions, &1))
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> then(fn
+        [{_id1, number1}, {_id2, number2}] -> number1 * number2
+        _ -> 0
+      end)
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, Day03Part2, <<70, 79, 82, 49, 0, 0, 17, ...>>, {:solve, 1}}
+```
+
+```elixir
+Day03Part2.solve(input)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+467835
+```
